@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SSE Banking Demo</title>
+  <style>
+    body { font-family: monospace; max-width: 700px; margin: 40px auto; padding: 0 20px; }
+    input { width: 280px; padding: 4px; margin: 4px 0; }
+    button { padding: 6px 12px; margin: 4px; cursor: pointer; }
+    label { display: inline-block; width: 120px; }
+    #balance-display {
+      font-size: 2em;
+      font-weight: bold;
+      padding: 20px;
+      margin: 16px 0;
+      background: #f0f0f0;
+      border-left: 4px solid #333;
+    }
+    #events {
+      background: #1e1e1e;
+      color: #00ff00;
+      padding: 12px;
+      height: 150px;
+      overflow-y: auto;
+      font-size: 0.85em;
+      margin-top: 8px;
+    }
+    #status { color: gray; font-size: 0.9em; margin: 4px 0; }
+    .connected { color: green !important; }
+    .disconnected { color: red !important; }
+  </style>
+</head>
+<body>
+
+<h1>SSE Banking Demo</h1>
+<p>Open DevTools → Network tab. Watch the <code>/balance</code> request stay open while REST requests open and close.</p>
+
+<h2>1. Create Account</h2>
+<label>Name:</label><input id="name" value="Ajit" /><br>
+<label>Description:</label><input id="desc" value="Savings" /><br>
+<button onclick="createAccount()">POST /accounts</button>
+<div id="account-info"></div>
+
+<h2>2. Watch Live Balance (SSE)</h2>
+<p>Open this in a second tab too — both will update when balance changes.</p>
+<label>Account ID:</label><input id="watch-id" placeholder="auto-filled on create" /><br>
+<button onclick="startWatching()">Connect SSE → GET /balance</button>
+<button onclick="stopWatching()">Disconnect</button>
+<div id="status" class="disconnected">● disconnected</div>
+<div id="balance-display">Balance: —</div>
+<div id="events"></div>
+
+<h2>3. Deposit / Withdraw</h2>
+<label>Account ID:</label><input id="txn-id" placeholder="auto-filled on create" /><br>
+<label>Amount:</label><input id="amount" type="number" value="50" /><br>
+<button onclick="deposit()">POST /deposit</button>
+<button onclick="withdraw()">POST /withdraw</button>
+<div id="txn-result"></div>
+
+<script>
+  let eventSource = null;
+
+  async function createAccount() {
+    const res = await fetch('/accounts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: document.getElementById('name').value, description: document.getElementById('desc').value })
+    });
+    const body = await res.json();
+    document.getElementById('account-info').textContent = `Created: ${body.id}`;
+    document.getElementById('watch-id').value = body.id;
+    document.getElementById('txn-id').value = body.id;
+  }
+
+  function startWatching() {
+    if (eventSource) eventSource.close();
+    const id = document.getElementById('watch-id').value;
+    if (!id) { alert('Create an account first'); return; }
+
+    eventSource = new EventSource(`/accounts/${id}/balance`);
+
+    eventSource.onmessage = (e) => {
+      const { balance } = JSON.parse(e.data);
+      document.getElementById('balance-display').textContent = `Balance: ${balance}`;
+      const events = document.getElementById('events');
+      events.innerHTML += `→ event received: ${e.data}\n`;
+      events.scrollTop = events.scrollHeight;
+    };
+
+    eventSource.onopen = () => {
+      const s = document.getElementById('status');
+      s.textContent = '● connected';
+      s.className = 'connected';
+    };
+
+    eventSource.onerror = () => {
+      const s = document.getElementById('status');
+      s.textContent = '● disconnected';
+      s.className = 'disconnected';
+    };
+  }
+
+  function stopWatching() {
+    if (eventSource) { eventSource.close(); eventSource = null; }
+    const s = document.getElementById('status');
+    s.textContent = '● disconnected';
+    s.className = 'disconnected';
+  }
+
+  async function deposit() {
+    const id = document.getElementById('txn-id').value;
+    const res = await fetch(`/accounts/${id}/deposit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value: Number(document.getElementById('amount').value) })
+    });
+    const body = await res.json();
+    document.getElementById('txn-result').textContent = res.ok ? `Deposited. Balance: ${body.balance}` : await res.text();
+  }
+
+  async function withdraw() {
+    const id = document.getElementById('txn-id').value;
+    const res = await fetch(`/accounts/${id}/withdraw`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value: Number(document.getElementById('amount').value) })
+    });
+    const body = res.ok ? await res.json() : null;
+    document.getElementById('txn-result').textContent = res.ok ? `Withdrawn. Balance: ${body.balance}` : await res.text();
+  }
+</script>
+</body>
+</html>
