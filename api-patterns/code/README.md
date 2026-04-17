@@ -9,4 +9,4 @@ Each implementation demonstrates one communication style through the banking app
 - [REST](./rest-server/) — HTTP verbs, status codes, ETag caching
 - [SSE](./sse-server/) — server push, live balance updates, persistent connection
 - [WebSocket](./ws-server/) — bidirectional, real-time customer support chat
-- gRPC (coming soon) — internal service-to-service
+- [gRPC](./grpc-server/) — internal service-to-service, binary protocol, strict contracts, streaming

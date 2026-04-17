@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package banking;
+
+message Account {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    int32 balance = 4;
+}
+
+message CreateAccountRequest {
+    string name = 1;
+    string description = 2;
+}
+
+message AccountRequest {
+    string id = 1;
+}
+
+message DepositRequest {
+    string id = 1;
+    int32 amount = 2;
+}
+
+message BalanceUpdate {
+    string id = 1;
+    int32 balance = 2;
+}
+
+service AccountService {
+    rpc CreateAccount(CreateAccountRequest) returns (Account);
+    rpc GetAccount(AccountRequest) returns (Account);
+    rpc Deposit(DepositRequest) returns (Account);
+    rpc WatchBalance(AccountRequest) returns (stream BalanceUpdate);
+}
