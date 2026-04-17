@@ -7,6 +7,6 @@ Each implementation demonstrates one communication style through the banking app
 ## Implementations
 
 - [REST](./rest-server/) — HTTP verbs, status codes, ETag caching
-- SSE (coming soon) — server push, live balance updates
+- [SSE](./sse-server/) — server push, live balance updates, persistent connection
 - WebSocket (coming soon) — bidirectional, live chat support
 - gRPC (coming soon) — internal service-to-service
