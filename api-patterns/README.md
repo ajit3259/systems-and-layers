@@ -8,7 +8,7 @@ Every system has a mix of these access patterns. And for each, your arsenal look
 
 So how do you decide?
 
-This is Part 1 — the decision framework. It gives you a mental model to reason about the choice and a story-driven walkthrough to see each option in context. Part 2 goes under the hood: how each style actually works, where it breaks, and hands-on code.
+This is Part 1 — the decision framework. It gives you a mental model to reason about the choice and a story-driven walkthrough to see each option in context. [Part 2](./part-2-under-the-hood.md) goes under the hood: how each style actually works and where it breaks. [Part 3](./code/) has hands-on implementations.
 
 Here we start with a framing to understand what's in your arsenal, then follow a single system — a banking app — where each new requirement forces a different choice. The decision framework falls out naturally at the end.
 

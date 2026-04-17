@@ -1,0 +1,22 @@
+{
+  "name": "rest-server",
+  "version": "1.0.0",
+  "description": "",
+  "license": "MIT",
+  "author": "Ajit Kumar",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "tsc --watch & node --watch dist/server.js"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.6.0",
+    "typescript": "^6.0.3"
+  },
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>REST Banking Demo</title>
+  <style>
+    body { font-family: monospace; max-width: 800px; margin: 40px auto; padding: 0 20px; }
+    h2 { border-bottom: 1px solid #ccc; padding-bottom: 4px; }
+    input { width: 300px; padding: 4px; margin: 4px 0; }
+    button { padding: 6px 12px; margin: 4px; cursor: pointer; }
+    #result {
+      margin-top: 20px;
+      background: #f4f4f4;
+      border: 1px solid #ccc;
+      padding: 16px;
+      white-space: pre-wrap;
+      min-height: 80px;
+    }
+    .status-2 { color: green; font-weight: bold; }
+    .status-3 { color: blue; font-weight: bold; }
+    .status-4 { color: red; font-weight: bold; }
+    label { display: inline-block; width: 120px; }
+  </style>
+</head>
+<body>
+
+<h1>REST Banking Demo</h1>
+<p>Open DevTools → Network tab to watch each request. Watch status codes, headers, and response bodies.</p>
+
+<h2>Create Account</h2>
+<div>
+  <label>Name:</label><input id="create-name" value="Ajit" /><br>
+  <label>Description:</label><input id="create-desc" value="Savings account" /><br>
+  <button onclick="createAccount()">POST /accounts → expect 201</button>
+</div>
+
+<h2>Get Account</h2>
+<div>
+  <label>Account ID:</label><input id="get-id" placeholder="paste id from create" /><br>
+  <button onclick="getAccount()">GET /accounts/:id → expect 200 + ETag</button>
+  <button onclick="getAccountCached()">GET again with ETag → expect 304</button>
+</div>
+
+<h2>Update Account</h2>
+<div>
+  <label>Account ID:</label><input id="update-id" placeholder="paste id" /><br>
+  <label>New description:</label><input id="patch-desc" value="Updated description" /><br>
+  <button onclick="patchAccount()">PATCH /accounts/:id → expect 200 (partial update)</button>
+  <br>
+  <label>New name:</label><input id="put-name" value="Ajit Kumar" /><br>
+  <label>New description:</label><input id="put-desc" value="Replaced description" /><br>
+  <button onclick="putAccount()">PUT /accounts/:id → expect 200 (full replace)</button>
+</div>
+
+<h2>Deposit / Withdraw</h2>
+<div>
+  <label>Account ID:</label><input id="txn-id" placeholder="paste id" /><br>
+  <label>Amount:</label><input id="txn-amount" type="number" value="100" /><br>
+  <button onclick="deposit()">POST /deposit → expect 200 + new balance</button>
+  <button onclick="withdraw()">POST /withdraw → expect 200 or 400</button>
+</div>
+
+<h2>Delete Account</h2>
+<div>
+  <label>Account ID:</label><input id="delete-id" placeholder="paste id" /><br>
+  <button onclick="deleteAccount()">DELETE /accounts/:id → expect 204</button>
+</div>
+
+<h2>Wrong Verb (405 vs 404)</h2>
+<div>
+  <button onclick="wrongVerb()">PUT /accounts (no id) → watch status code</button>
+</div>
+
+<h2>Result</h2>
+<div id="result">Results will appear here...</div>
+
+<script>
+  let lastETag = null;
+
+  function show(status, headers, body) {
+    const statusClass = `status-${String(status)[0]}`;
+    const etag = headers.get('etag');
+    if (etag) lastETag = etag;
+
+    const headerLines = ['content-type', 'etag', 'cache-control', 'allow']
+      .map(h => headers.get(h) ? `  ${h}: ${headers.get(h)}` : null)
+      .filter(Boolean)
+      .join('\n');
+
+    document.getElementById('result').innerHTML =
+      `<span class="${statusClass}">Status: ${status}</span>\n\nHeaders:\n${headerLines || '  (none relevant)'}\n\nBody:\n  ${body || '(empty)'}`;
+  }
+
+  async function createAccount() {
+    const res = await fetch('/accounts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: document.getElementById('create-name').value,
+        description: document.getElementById('create-desc').value
+      })
+    });
+    const body = await res.text();
+    show(res.status, res.headers, body);
+
+    // auto-fill id fields for convenience
+    try {
+      const id = JSON.parse(body).id;
+      ['get-id','update-id','txn-id','delete-id'].forEach(f => document.getElementById(f).value = id);
+    } catch(_) {}
+  }
+
+  async function getAccount() {
+    const id = document.getElementById('get-id').value;
+    const res = await fetch(`/accounts/${id}`);
+    const body = await res.text();
+    show(res.status, res.headers, body);
+  }
+
+  async function getAccountCached() {
+    const id = document.getElementById('get-id').value;
+    if (!lastETag) { document.getElementById('result').textContent = 'Do a GET first to capture the ETag'; return; }
+    const res = await fetch(`/accounts/${id}`, {
+      headers: { 'If-None-Match': lastETag }
+    });
+    const body = await res.text();
+    show(res.status, res.headers, body);
+  }
+
+  async function patchAccount() {
+    const id = document.getElementById('update-id').value;
+    const res = await fetch(`/accounts/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ description: document.getElementById('patch-desc').value })
+    });
+    const body = await res.text();
+    show(res.status, res.headers, body);
+  }
+
+  async function putAccount() {
+    const id = document.getElementById('update-id').value;
+    const res = await fetch(`/accounts/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: document.getElementById('put-name').value,
+        description: document.getElementById('put-desc').value
+      })
+    });
+    const body = await res.text();
+    show(res.status, res.headers, body);
+  }
+
+  async function deposit() {
+    const id = document.getElementById('txn-id').value;
+    const res = await fetch(`/accounts/${id}/deposit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value: Number(document.getElementById('txn-amount').value) })
+    });
+    const body = await res.text();
+    show(res.status, res.headers, body);
+  }
+
+  async function withdraw() {
+    const id = document.getElementById('txn-id').value;
+    const res = await fetch(`/accounts/${id}/withdraw`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value: Number(document.getElementById('txn-amount').value) })
+    });
+    const body = await res.text();
+    show(res.status, res.headers, body);
+  }
+
+  async function deleteAccount() {
+    const id = document.getElementById('delete-id').value;
+    const res = await fetch(`/accounts/${id}`, { method: 'DELETE' });
+    const body = await res.text();
+    show(res.status, res.headers, body);
+  }
+
+  async function wrongVerb() {
+    const res = await fetch('/accounts', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'test' })
+    });
+    const body = await res.text();
+    show(res.status, res.headers, body);
+  }
+</script>
+</body>
+</html>
