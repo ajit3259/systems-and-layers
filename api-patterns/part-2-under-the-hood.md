@@ -1,3 +1,9 @@
+---
+title: "API Patterns: Part 2 — Under the Hood"
+parent: API Patterns
+nav_order: 2
+---
+
 # API Patterns — Part 2: Under the Hood
 
 ← [Part 1: The Decision Framework](./README.md)

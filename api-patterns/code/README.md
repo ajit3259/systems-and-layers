@@ -1,3 +1,9 @@
+---
+title: "API Patterns: Part 3 — Hands-on Code"
+parent: API Patterns
+nav_order: 3
+---
+
 # Part 3: Hands-on Code
 
 ← [Part 2: Under the Hood](../part-2-under-the-hood.md)

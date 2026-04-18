@@ -1,3 +1,9 @@
+---
+title: "API Patterns: Part 1 — The Decision Framework"
+parent: API Patterns
+nav_order: 1
+---
+
 # API Patterns — Part 1: The Decision Framework
 
 When building a system, one of the first questions you face is: how will clients interact with it?

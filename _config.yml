@@ -1,0 +1,24 @@
+title: Systems and Layers
+description: Deep dives into systems topics — written from first principles, built hands-on.
+url: "https://ajitkumar3259.github.io"
+baseurl: "/systems-and-layers"
+
+theme: just-the-docs
+
+just_the_docs:
+  color_scheme: light
+
+nav_enabled: true
+search_enabled: true
+
+# Exclude code directories from Jekyll build
+exclude:
+  - api-patterns/code/
+  - "*.ts"
+  - "*.js"
+  - node_modules/
+  - "*/node_modules/"
+  - "*/dist/"
+  - "*/package.json"
+  - "*/package-lock.json"
+  - "*/tsconfig.json"
