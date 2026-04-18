@@ -1,4 +1,6 @@
 source "https://rubygems.org"
 
-gem "just-the-docs"
 gem "jekyll", "~> 4.3"
+gem "jekyll-theme-chirpy", "~> 7.0"
+gem "jekyll-paginate"
+gem "jekyll-archives"

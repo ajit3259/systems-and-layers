@@ -1,17 +1,61 @@
 title: Systems and Layers
+tagline: Deep dives into systems topics — written from first principles, built hands-on.
 description: Deep dives into systems topics — written from first principles, built hands-on.
-url: "https://ajitkumar3259.github.io"
+url: "https://ajit3259.github.io"
 baseurl: "/systems-and-layers"
 
-theme: just-the-docs
+author:
+  name: Ajit Kumar
+  url: https://github.com/ajit3259
 
-just_the_docs:
-  color_scheme: light
+avatar: /images/systems_and_layers_sq.png
 
-nav_enabled: true
-search_enabled: true
+social:
+  name: Ajit Kumar
+  email: ajitkumar3259@gmail.com
+  links:
+    - https://github.com/ajit3259
 
-# Exclude code directories from Jekyll build
+theme: jekyll-theme-chirpy
+
+timezone: Asia/Kolkata
+
+paginate: 10
+paginate_path: "/page:num/"
+
+plugins:
+  - jekyll-paginate
+  - jekyll-archives
+
+jekyll-archives:
+  enabled: [categories, tags]
+  layouts:
+    category: category
+    tag: tag
+  permalinks:
+    category: /categories/:name/
+    tag: /tags/:name/
+
+permalink: /:categories/:title/
+
+collections:
+  tabs:
+    output: true
+    sort_by: order
+
+defaults:
+  - scope:
+      path: ""
+      type: posts
+    values:
+      layout: post
+      author: ajit_kumar
+  - scope:
+      path: ""
+      type: tabs
+    values:
+      layout: page
+
 exclude:
   - README.md
   - api-patterns/code/rest-server/

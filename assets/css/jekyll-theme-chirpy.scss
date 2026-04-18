@@ -1,0 +1,16 @@
+---
+---
+
+/* prettier-ignore */
+@use 'main
+{%- if jekyll.environment == "production" -%}
+  .bundle
+{%- endif -%}
+';
+
+/* Code blocks: Chirpy strips <pre> wrapper via refactor-content.html,
+   so whitespace must be preserved on <code> directly */
+.highlight code {
+  white-space: pre;
+  display: block;
+}
