@@ -1,4 +1,5 @@
 ---
+layout: default
 title: "API Patterns: Part 2 — Under the Hood"
 parent: API Patterns
 nav_order: 2
@@ -6,7 +7,7 @@ nav_order: 2
 
 # API Patterns — Part 2: Under the Hood
 
-← [Part 1: The Decision Framework](./README.md)
+← [Part 1: The Decision Framework](./) 
 
 Part 1 gave you the decision framework — which style to reach for given a set of requirements. This part explains why each one works the way it does. Understanding the mechanics is what lets you debug unexpected behavior, make the right call in edge cases, and defend your choices when someone pushes back.
 

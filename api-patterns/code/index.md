@@ -1,4 +1,5 @@
 ---
+layout: default
 title: "API Patterns: Part 3 — Hands-on Code"
 parent: API Patterns
 nav_order: 3
@@ -6,7 +7,7 @@ nav_order: 3
 
 # Part 3: Hands-on Code
 
-← [Part 2: Under the Hood](../part-2-under-the-hood.md)
+← [Part 2: Under the Hood](../part-2-under-the-hood)
 
 In Part 1 we discussed how API communication can be layered as protocol + communication style + data format, and how different scenarios call for different patterns. In Part 2 we looked at the mechanics of each pattern — what happens on the wire.
 

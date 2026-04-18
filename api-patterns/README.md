@@ -1,4 +1,5 @@
 ---
+layout: default
 title: "API Patterns: Part 1 — The Decision Framework"
 parent: API Patterns
 nav_order: 1
