@@ -1,0 +1,52 @@
+# types
+type User {
+    id: ID!,
+    name: String!,
+    age: Int!,
+    address: String!,
+    accounts: [Account!]!
+}
+
+type Account {
+    id: ID!,
+    description: String!,
+    balance: Int!
+}
+
+# Input types
+input CreateUserInput {
+    name: String!,
+    age: Int!,
+    address: String!
+}
+
+input CreateAccountInput {
+    userId: String!,
+    description: String!
+}
+
+input DepositInput {
+    userId: String!,
+    accountId: String!
+    amount: Int!
+}
+
+# Operations
+type Query {
+    # ID type is a convention
+    user(userId: ID!): User!
+    # no parentheses needed when there are no arguments
+    users: [User!]!
+    account(userId: ID!, accountId: ID!): Account!
+    accounts(userId: ID!): [Account!]!
+}
+
+type Mutation {
+    createUser(input: CreateUserInput!): User!
+    createAccount(input: CreateAccountInput!): Account!
+    deposit(input: DepositInput!): Account!
+}
+
+type Subscription {
+    balanceUpdated(userId: String!, accountId: String!): Account!
+}

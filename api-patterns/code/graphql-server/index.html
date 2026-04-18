@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>GraphQL Banking Demo</title>
+    <style>
+        body { font-family: monospace; max-width: 900px; margin: 40px auto; padding: 0 20px; }
+        h2 { margin-top: 32px; }
+        input, button { font-family: monospace; font-size: 14px; padding: 6px 10px; margin: 4px; }
+        input { width: 220px; }
+        pre { background: #f4f4f4; padding: 12px; border-radius: 4px; white-space: pre-wrap; }
+        .section { border: 1px solid #ddd; padding: 16px; border-radius: 6px; margin-bottom: 24px; }
+        #balance-stream { background: #f0fff0; }
+    </style>
+</head>
+<body>
+    <h1>GraphQL Banking Demo</h1>
+
+    <div class="section">
+        <h2>Create User</h2>
+        <input id="user-name" placeholder="Name" value="Ajit" />
+        <input id="user-age" placeholder="Age" value="26" />
+        <input id="user-address" placeholder="Address" value="Bangalore" />
+        <button onclick="createUser()">Create User</button>
+        <pre id="create-user-result"></pre>
+    </div>
+
+    <div class="section">
+        <h2>Create Account</h2>
+        <input id="account-user-id" placeholder="User ID" />
+        <input id="account-description" placeholder="Description" value="Savings" />
+        <button onclick="createAccount()">Create Account</button>
+        <pre id="create-account-result"></pre>
+    </div>
+
+    <div class="section">
+        <h2>Deposit</h2>
+        <input id="deposit-user-id" placeholder="User ID" />
+        <input id="deposit-account-id" placeholder="Account ID" />
+        <input id="deposit-amount" placeholder="Amount" value="100" />
+        <button onclick="deposit()">Deposit</button>
+        <pre id="deposit-result"></pre>
+    </div>
+
+    <div class="section">
+        <h2>Query Users (with accounts — observe N+1 in server logs)</h2>
+        <button onclick="queryUsers()">Get All Users</button>
+        <pre id="users-result"></pre>
+    </div>
+
+    <div class="section" id="balance-stream">
+        <h2>Subscribe to Balance Updates (WebSocket)</h2>
+        <input id="sub-user-id" placeholder="User ID" />
+        <input id="sub-account-id" placeholder="Account ID" />
+        <button onclick="subscribe()">Subscribe</button>
+        <button onclick="unsubscribe()">Unsubscribe</button>
+        <pre id="subscription-result">Not subscribed</pre>
+    </div>
+
+    <script>
+        const GRAPHQL_URL = "http://localhost:4000/graphql";
+        const WS_URL = "ws://localhost:4000/graphql";
+
+        async function gql(query, variables = {}) {
+            const res = await fetch(GRAPHQL_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ query, variables })
+            });
+            return res.json();
+        }
+
+        async function createUser() {
+            const result = await gql(`
+                mutation($input: CreateUserInput!) {
+                    createUser(input: $input) { id name age address }
+                }
+            `, { input: {
+                name: document.getElementById("user-name").value,
+                age: parseInt(document.getElementById("user-age").value),
+                address: document.getElementById("user-address").value
+            }});
+            document.getElementById("create-user-result").textContent = JSON.stringify(result, null, 2);
+            if (result.data?.createUser?.id) {
+                document.getElementById("account-user-id").value = result.data.createUser.id;
+                document.getElementById("deposit-user-id").value = result.data.createUser.id;
+                document.getElementById("sub-user-id").value = result.data.createUser.id;
+            }
+        }
+
+        async function createAccount() {
+            const result = await gql(`
+                mutation($input: CreateAccountInput!) {
+                    createAccount(input: $input) { id description balance }
+                }
+            `, { input: {
+                userId: document.getElementById("account-user-id").value,
+                description: document.getElementById("account-description").value
+            }});
+            document.getElementById("create-account-result").textContent = JSON.stringify(result, null, 2);
+            if (result.data?.createAccount?.id) {
+                document.getElementById("deposit-account-id").value = result.data.createAccount.id;
+                document.getElementById("sub-account-id").value = result.data.createAccount.id;
+            }
+        }
+
+        async function deposit() {
+            const result = await gql(`
+                mutation($input: DepositInput!) {
+                    deposit(input: $input) { id balance }
+                }
+            `, { input: {
+                userId: document.getElementById("deposit-user-id").value,
+                accountId: document.getElementById("deposit-account-id").value,
+                amount: parseInt(document.getElementById("deposit-amount").value)
+            }});
+            document.getElementById("deposit-result").textContent = JSON.stringify(result, null, 2);
+        }
+
+        async function queryUsers() {
+            const result = await gql(`
+                query {
+                    users { id name accounts { id balance } }
+                }
+            `);
+            document.getElementById("users-result").textContent = JSON.stringify(result, null, 2);
+        }
+
+        // graphql-ws protocol
+        let ws = null;
+        let subscriptionId = null;
+
+        function subscribe() {
+            const userId = document.getElementById("sub-user-id").value;
+            const accountId = document.getElementById("sub-account-id").value;
+            const out = document.getElementById("subscription-result");
+
+            ws = new WebSocket(WS_URL, "graphql-transport-ws");
+
+            ws.onopen = () => {
+                ws.send(JSON.stringify({ type: "connection_init", payload: {} }));
+            };
+
+            ws.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                if (msg.type === "connection_ack") {
+                    subscriptionId = "sub-1";
+                    ws.send(JSON.stringify({
+                        id: subscriptionId,
+                        type: "subscribe",
+                        payload: {
+                            query: `subscription($userId: String!, $accountId: String!) {
+                                balanceUpdated(userId: $userId, accountId: $accountId) { id balance }
+                            }`,
+                            variables: { userId, accountId }
+                        }
+                    }));
+                    out.textContent = "Subscribed — make a deposit to see updates";
+                } else if (msg.type === "next") {
+                    out.textContent += "\n" + JSON.stringify(msg.payload.data, null, 2);
+                } else if (msg.type === "error") {
+                    out.textContent = "Error: " + JSON.stringify(msg.payload);
+                }
+            };
+
+            ws.onerror = (err) => { out.textContent = "WebSocket error"; };
+            ws.onclose = () => { out.textContent += "\nDisconnected"; };
+        }
+
+        function unsubscribe() {
+            if (ws && subscriptionId) {
+                ws.send(JSON.stringify({ id: subscriptionId, type: "complete" }));
+                ws.close();
+                ws = null;
+            }
+        }
+    </script>
+</body>
+</html>

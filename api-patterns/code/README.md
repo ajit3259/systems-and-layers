@@ -10,3 +10,4 @@ Each implementation demonstrates one communication style through the banking app
 - [SSE](./sse-server/) — server push, live balance updates, persistent connection
 - [WebSocket](./ws-server/) — bidirectional, real-time customer support chat
 - [gRPC](./grpc-server/) — internal service-to-service, binary protocol, strict contracts, streaming
+- [GraphQL](./graphql-server/) — flexible client queries, mutations, subscriptions, N+1 and DataLoader
