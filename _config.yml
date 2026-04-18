@@ -13,6 +13,7 @@ search_enabled: true
 
 # Exclude code directories from Jekyll build
 exclude:
+  - README.md
   - api-patterns/code/
   - "*.ts"
   - "*.js"
