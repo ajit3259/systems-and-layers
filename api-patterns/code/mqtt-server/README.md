@@ -11,7 +11,14 @@ Install and start Mosquitto (the MQTT broker):
 ```bash
 brew install mosquitto
 mkdir -p /opt/homebrew/etc/mosquitto
-echo "listener 1883\nallow_anonymous true" > /opt/homebrew/etc/mosquitto/mosquitto.conf
+cat > /opt/homebrew/etc/mosquitto/mosquitto.conf << 'EOF'
+listener 1883
+allow_anonymous true
+
+listener 9001
+protocol websockets
+allow_anonymous true
+EOF
 brew services start mosquitto
 ```
 
@@ -22,7 +29,14 @@ npm run build
 npm run publish-health
 ```
 
-In another terminal (Bank subscribing):
+In another terminal (browser dashboard):
+```bash
+npm start
+```
+
+Open `http://localhost:3000` — the dashboard connects to the broker over WebSocket (port 9001) and shows live ATM health status, last seen time, and stale indicators.
+
+Alternatively, subscribe from the terminal:
 ```bash
 npm run subscribe-health
 ```
@@ -131,11 +145,12 @@ With `cleanSession: true` (default), the broker discards any queued messages on 
 
 ## What to observe
 
-1. **Start publisher then subscriber** — subscriber immediately receives health from all 10 ATMs
-2. **Stop publisher, start a new subscriber** — retained messages deliver last known state instantly with no publisher running
-3. **Restart Mosquitto** (`brew services restart mosquitto`) while publisher is running — watch ATMs reconnect automatically
-4. **QoS 1 ACK logs** — each publish logs "broker ACK received", proving delivery guarantee
-5. **Wildcard routing** — one `atm/+/health` subscription catches all 10 ATMs with no server-side routing code
+1. **Start publisher then open dashboard** — all 10 ATMs appear within 5 seconds, green status, last seen updating every second
+2. **Stop publisher** — ATMs turn grey ("stale") after 15 seconds — 3 missed heartbeats — with no code changes needed
+3. **Stop publisher, open a new browser tab** — retained messages deliver last known state instantly before any new publish
+4. **Restart Mosquitto** (`brew services restart mosquitto`) while publisher is running — watch ATMs reconnect automatically in publisher logs
+5. **QoS 1 ACK logs** — each publish logs "broker ACK received" in the publisher terminal
+6. **Wildcard routing** — one `atm/+/health` subscription in the dashboard catches all 10 ATMs — no server-side routing code
 
 ## Alert logic (not implemented)
 

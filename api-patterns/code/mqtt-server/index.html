@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MQTT ATM Health Monitor</title>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <style>
+        body { font-family: monospace; max-width: 900px; margin: 40px auto; padding: 0 20px; }
+        h2 { margin-top: 32px; }
+        button { font-family: monospace; font-size: 14px; padding: 6px 12px; margin: 4px; cursor: pointer; }
+        #status { padding: 8px; border-radius: 4px; margin: 12px 0; background: #f4f4f4; }
+        #status.connected { background: #d4edda; }
+        #status.disconnected { background: #f8d7da; }
+        table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+        th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #ddd; }
+        th { background: #f4f4f4; }
+        .healthy { color: green; }
+        .degraded { color: orange; }
+        .shutting-down { color: red; }
+        .stale { color: #999; }
+        #log { background: #f4f4f4; padding: 12px; border-radius: 4px; height: 200px; overflow-y: auto; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <h1>MQTT ATM Health Monitor</h1>
+    <p>Connects to Mosquitto over WebSocket (port 9001). Start the ATM publisher in a terminal first.</p>
+
+    <div id="status" class="disconnected">Disconnected</div>
+    <button onclick="connect()">Connect</button>
+    <button onclick="disconnect()">Disconnect</button>
+
+    <h2>ATM Health Status</h2>
+    <table>
+        <thead>
+            <tr><th>ATM ID</th><th>Status</th><th>Last Seen</th><th>Messages</th></tr>
+        </thead>
+        <tbody id="atm-table"></tbody>
+    </table>
+
+    <h2>Live Message Log</h2>
+    <div id="log"></div>
+
+    <script>
+        let client = null;
+        const atmData = {};
+
+        function connect() {
+            client = mqtt.connect("ws://localhost:9001", { clientId: "bank-dashboard-" + Math.random().toString(16).slice(2) });
+
+            client.on("connect", () => {
+                document.getElementById("status").textContent = "Connected to broker";
+                document.getElementById("status").className = "connected";
+                client.subscribe("atm/+/health", { qos: 1 });
+                log("Subscribed to atm/+/health");
+            });
+
+            client.on("message", (topic, payload) => {
+                const msg = JSON.parse(payload.toString());
+                const atmId = topic.split("/")[1];
+
+                if (!atmData[atmId]) atmData[atmId] = { count: 0 };
+                atmData[atmId].status = msg.healthStatus;
+                atmData[atmId].reportedAt = msg.reportedAt;
+                atmData[atmId].count++;
+
+                renderTable();
+                log(`[${topic}] ${payload.toString()}`);
+            });
+
+            client.on("disconnect", () => {
+                document.getElementById("status").textContent = "Disconnected";
+                document.getElementById("status").className = "disconnected";
+            });
+
+            client.on("error", (err) => log("Error: " + err.message));
+            client.on("reconnect", () => log("Reconnecting..."));
+        }
+
+        function disconnect() {
+            if (client) {
+                client.end();
+                document.getElementById("status").textContent = "Disconnected";
+                document.getElementById("status").className = "disconnected";
+            }
+        }
+
+        function renderTable() {
+            const now = Math.floor(Date.now() / 1000);
+            const tbody = document.getElementById("atm-table");
+            tbody.innerHTML = Object.entries(atmData)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([id, d]) => {
+                    const age = now - d.reportedAt;
+                    const stale = age > 15;
+                    return `<tr>
+                        <td>${id}</td>
+                        <td class="${stale ? 'stale' : d.status}">${d.status}${stale ? ' (stale)' : ''}</td>
+                        <td>${age}s ago</td>
+                        <td>${d.count}</td>
+                    </tr>`;
+                }).join("");
+        }
+
+        function log(msg) {
+            const div = document.getElementById("log");
+            div.innerHTML = `<div>[${new Date().toLocaleTimeString()}] ${msg}</div>` + div.innerHTML;
+        }
+
+        // refresh table every second to update "last seen" age
+        setInterval(renderTable, 1000);
+    </script>
+</body>
+</html>

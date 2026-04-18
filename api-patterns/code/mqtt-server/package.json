@@ -1,5 +1,5 @@
 {
-  "name": "ws-server",
+  "name": "mqtt-server",
   "version": "1.0.0",
   "description": "",
   "license": "MIT",
@@ -9,7 +9,8 @@
   "scripts": {
     "build": "tsc",
     "publish-health": "node dist/atm.js",
-    "subscribe-health": "node dist/bank.js"
+    "subscribe-health": "node dist/bank.js",
+    "start": "node -e \"import('express').then(({default:e})=>{const app=e();app.use(e.static('.'));app.listen(3000,()=>console.log('UI at http://localhost:3000'));})\""
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
