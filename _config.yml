@@ -14,9 +14,12 @@ search_enabled: true
 # Exclude code directories from Jekyll build
 exclude:
   - README.md
-  - api-patterns/code/
-  - "*.ts"
-  - "*.js"
+  - api-patterns/code/rest-server/
+  - api-patterns/code/sse-server/
+  - api-patterns/code/ws-server/
+  - api-patterns/code/grpc-server/
+  - api-patterns/code/graphql-server/
+  - api-patterns/code/mqtt-server/
   - node_modules/
   - "*/node_modules/"
   - "*/dist/"
