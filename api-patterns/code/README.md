@@ -11,3 +11,4 @@ Each implementation demonstrates one communication style through the banking app
 - [WebSocket](./ws-server/) — bidirectional, real-time customer support chat
 - [gRPC](./grpc-server/) — internal service-to-service, binary protocol, strict contracts, streaming
 - [GraphQL](./graphql-server/) — flexible client queries, mutations, subscriptions, N+1 and DataLoader
+- [MQTT](./mqtt-server/) — pub/sub broker, IoT health monitoring, QoS levels, retained messages
