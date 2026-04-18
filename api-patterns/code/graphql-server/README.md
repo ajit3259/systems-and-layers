@@ -131,6 +131,12 @@ When a client subscribes, `graphql-ws` opens a WebSocket connection. The server 
 5. **Get All Users** — check server logs: `DataLoader batch called with N userIds` fires once for all users
 6. **Network tab** — only POST requests for queries/mutations; one WebSocket connection for the subscription, reused for all events
 
+## Production considerations
+
+**In-memory PubSub doesn't scale.** `graphql-subscriptions` stores events in memory on a single server instance. In production, you run multiple instances behind a load balancer — a deposit hitting server 1 publishes to server 1's memory only. A client subscribed on server 2 never receives the event.
+
+The fix is a shared pub/sub layer: [graphql-redis-subscriptions](https://github.com/davidyaha/graphql-redis-subscriptions) replaces the in-memory `PubSub` with Redis. All server instances publish and subscribe through Redis, so events reach every connected client regardless of which instance they're on.
+
 ## Dependencies
 
 | Package | Purpose |
