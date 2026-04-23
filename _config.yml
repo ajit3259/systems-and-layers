@@ -58,6 +58,7 @@ defaults:
 
 exclude:
   - README.md
+  - api-patterns/
   - api-patterns/code/rest-server/
   - api-patterns/code/sse-server/
   - api-patterns/code/ws-server/
