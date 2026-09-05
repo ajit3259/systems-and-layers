@@ -1,6 +1,6 @@
 # Semaphore
 
-Demonstrates a semaphore — a generalization of a mutex that allows N concurrent holders instead of one.
+Demonstrates a semaphore, a generalization of a mutex that allows N concurrent holders instead of one.
 
 Modeled as a movie hall with 2 seats and 10 goroutines competing for them. Go's `sync` package has no built-in semaphore; a buffered channel serves the same purpose naturally.
 

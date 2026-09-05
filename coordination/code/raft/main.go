@@ -10,6 +10,18 @@ import (
 
 const NODE_CNT = 3
 const CHANNEL_BUFFER_SIZE = 10
+const HEARTBEAT_INTERVAL = 1 * time.Second
+
+// send delivers a message without blocking. A full inbox means the receiver is
+// crashed or unreachable and is no longer draining it, so we drop the message.
+// A blocking send here would model a network that waits forever for a dead node,
+// which wedges the whole cluster once one node goes away.
+func send(ch chan Message, msg Message) {
+	select {
+	case ch <- msg:
+	default:
+	}
+}
 
 func randomElectionTimeout() time.Duration {
 	return time.Duration(3+rand.Intn(3)) * time.Second
@@ -30,23 +42,15 @@ func stepDown(node *NodeState, newTerm int64) {
 	node.votesFrom = make(map[string]bool)
 }
 
-func sendHeartbeats(ctx context.Context, node *NodeState, msgChannels []chan Message) {
-	ticker := time.NewTicker(1 * time.Second)
-	defer ticker.Stop()
+// sendHeartbeats is called from runNode's own goroutine, never as a goroutine of
+// its own. Running it separately would leave NodeState shared between two
+// goroutines with no synchronisation, which is the race Part 1 is about: this
+// code reads node.role and node.currentTerm while runNode writes both.
+func sendHeartbeats(node *NodeState, msgChannels []chan Message) {
 	nodeID, _ := strconv.Atoi(node.id)
-	for {
-		select {
-		case <-ticker.C:
-			if node.role != Leader {
-				return
-			}
-			for i, ch := range msgChannels {
-				if i != nodeID {
-					ch <- Heartbeat{term: node.currentTerm, leaderId: node.id}
-				}
-			}
-		case <-ctx.Done():
-			return
+	for i, ch := range msgChannels {
+		if i != nodeID {
+			send(ch, Heartbeat{term: node.currentTerm, leaderId: node.id})
 		}
 	}
 }
@@ -58,6 +62,8 @@ func runNode(ctx context.Context, node *NodeState, msgChannels []chan Message) {
 	electionTimeout := randomElectionTimeout()
 	timer := time.NewTimer(electionTimeout)
 	defer timer.Stop()
+	heartbeatTicker := time.NewTicker(HEARTBEAT_INTERVAL)
+	defer heartbeatTicker.Stop()
 
 	for {
 		select {
@@ -82,11 +88,11 @@ func runNode(ctx context.Context, node *NodeState, msgChannels []chan Message) {
 					// reset election timer when votedFor
 					timer.Reset(randomElectionTimeout())
 					candidateId, _ := strconv.Atoi(voteRequest.candidateId)
-					msgChannels[candidateId] <- VoteResponse{
+					send(msgChannels[candidateId], VoteResponse{
 						term:        voteRequest.term,
 						voteGranted: true,
 						fromId:      node.id,
-					}
+					})
 				}
 			case "VoteResponse":
 				voteResponse := msg.(VoteResponse)
@@ -100,9 +106,9 @@ func runNode(ctx context.Context, node *NodeState, msgChannels []chan Message) {
 					}
 				}
 				if node.votes > NODE_CNT/2 && node.role != Leader {
-					fmt.Printf("[Node %s] [Term %d] Won election — becoming LEADER\n", node.id, node.currentTerm)
+					fmt.Printf("[Node %s] [Term %d] Won election, becoming LEADER\n", node.id, node.currentTerm)
 					node.role = Leader
-					go sendHeartbeats(ctx, node, msgChannels)
+					sendHeartbeats(node, msgChannels)
 				}
 			case "Heartbeat":
 				heartBeat := msg.(Heartbeat)
@@ -114,7 +120,7 @@ func runNode(ctx context.Context, node *NodeState, msgChannels []chan Message) {
 				timer.Reset(randomElectionTimeout())
 				// send heartbeatAck
 				senderID, _ := strconv.Atoi(heartBeat.leaderId)
-				msgChannels[senderID] <- HeartbeatAck{term: node.currentTerm, fromId: node.id}
+				send(msgChannels[senderID], HeartbeatAck{term: node.currentTerm, fromId: node.id})
 			case "HeartbeatAck":
 				heartbeatAck := msg.(HeartbeatAck)
 				if node.role != Leader {
@@ -123,6 +129,10 @@ func runNode(ctx context.Context, node *NodeState, msgChannels []chan Message) {
 				if heartbeatAck.term > node.currentTerm {
 					stepDown(node, heartbeatAck.term)
 				}
+			}
+		case <-heartbeatTicker.C:
+			if node.role == Leader {
+				sendHeartbeats(node, msgChannels)
 			}
 		case <-timer.C:
 			if node.role == Leader {
@@ -136,7 +146,7 @@ func runNode(ctx context.Context, node *NodeState, msgChannels []chan Message) {
 			node.votedFor = node.id
 			node.votesFrom[node.id] = true
 			node.currentTerm += 1
-			fmt.Printf("[Node %s] Election timeout — starting election for term %d\n", node.id, node.currentTerm)
+			fmt.Printf("[Node %s] Election timeout, starting election for term %d\n", node.id, node.currentTerm)
 			nodeID, _ := strconv.Atoi(node.id)
 			for i := range msgChannels {
 				voteReq := VoteRequest{
@@ -146,7 +156,7 @@ func runNode(ctx context.Context, node *NodeState, msgChannels []chan Message) {
 					lastLogTerm:  getLastLogTerm(node.log),
 				}
 				if i != nodeID {
-					msgChannels[i] <- voteReq
+					send(msgChannels[i], voteReq)
 				}
 			}
 			timer.Reset(randomElectionTimeout())

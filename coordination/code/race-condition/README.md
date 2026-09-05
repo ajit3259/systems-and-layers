@@ -1,6 +1,6 @@
 # Race Condition
 
-Demonstrates a lost update — the most common consequence of unsynchronized shared state.
+Demonstrates a lost update, the most common consequence of unsynchronized shared state.
 
 1000 goroutines each increment a shared counter 1000 times. Expected result: 1,000,000. Actual result: significantly less, and different every run.
 
@@ -22,4 +22,4 @@ The race detector identifies the exact memory address and goroutines involved in
 
 - Final count is wrong and non-deterministic
 - Race detector reports concurrent read and write at the same address
-- The root cause: `counter++` compiles to LOAD, ADD, STORE — three instructions that can be interleaved across goroutines
+- The root cause: `counter++` compiles to LOAD, ADD, STORE: three instructions that can be interleaved across goroutines
